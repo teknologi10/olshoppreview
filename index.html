@@ -1,1 +1,968 @@
-hello
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toko Online Sederhana</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Library untuk Export PDF & Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bs-primary: #0D6EFD; /* Biru Modern */
+            --bs-primary-rgb: 13, 110, 253;
+            --bs-secondary: #6c757d; /* Abu-abu Netral */
+            --bs-body-font-family: 'Inter', sans-serif;
+            --bs-body-bg: #f8f9fa;
+        }
+
+        body {
+            background-color: var(--bs-body-bg);
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+        }
+
+        .card {
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,.05);
+            transition: transform .2s, box-shadow .2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,.1);
+        }
+
+        .card-img-top {
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+        }
+        
+        .btn-primary {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+        }
+
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+        
+        /* Admin Sidebar */
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            padding-top: 56px; /* Height of navbar */
+            background-color: #fff;
+            box-shadow: 2px 0 5px rgba(0,0,0,.05);
+            z-index: 100;
+        }
+        
+        .sidebar .nav-link {
+            color: #333;
+            border-radius: 0.5rem;
+            margin: 0.25rem 0.5rem;
+        }
+        
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            color: var(--bs-primary);
+        }
+
+        .admin-main-content {
+            margin-left: 250px;
+            padding-top: 70px; /* Adjust for navbar */
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding-top: 0;
+            }
+            .admin-main-content {
+                margin-left: 0;
+            }
+        }
+        
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.4em 0.8em;
+        }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-dikonfirmasi { background-color: #198754; }
+        .status-ditolak { background-color: #dc3545; }
+
+        .modal-backdrop {
+             z-index: 1050;
+        }
+        .modal {
+            z-index: 1060;
+        }
+    </style>
+</head>
+<body>
+
+    <!--
+    ===================================================================
+    FRONTEND (PEMBELI)
+    ===================================================================
+    -->
+
+    <div id="frontend-view">
+        <!-- Navbar Pembeli -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="#" data-page="home"><i class="bi bi-cart3 me-2"></i>TokoKita</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-page="home">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="products">Produk</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto align-items-center" id="auth-links">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="register">Register</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary btn-sm px-3" href="#" data-page="login">Login</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto d-none align-items-center" id="user-links">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="user-orders"><i class="bi bi-receipt me-1"></i>Pesanan Saya</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i> <span id="username-display"></span>
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="#" id="logout-btn">Logout</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Halaman Home/Produk -->
+        <div id="products-page" class="page active">
+            <div class="container py-5">
+                <div class="row">
+                    <div class="col-12 text-center mb-5">
+                        <h1 class="display-5 fw-bold">Selamat Datang di TokoKita</h1>
+                        <p class="lead text-muted">Temukan produk terbaik pilihan Anda.</p>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-6 offset-md-3">
+                        <div class="input-group">
+                            <input type="text" id="search-input" class="form-control" placeholder="Cari produk...">
+                            <button class="btn btn-outline-primary" type="button" id="search-button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="product-list" class="row g-4">
+                    <!-- Produk akan dimuat di sini oleh JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Halaman Registrasi -->
+        <div id="register-page" class="page">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="card p-4">
+                            <div class="card-body">
+                                <h3 class="card-title text-center mb-4">Registrasi Akun Baru</h3>
+                                <form id="register-form">
+                                    <div class="mb-3">
+                                        <label for="reg-nama" class="form-label">Nama Lengkap</label>
+                                        <input type="text" class="form-control" id="reg-nama" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="reg-email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="reg-email" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="reg-password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="reg-password" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="reg-hp" class="form-label">No. HP</label>
+                                        <input type="tel" class="form-control" id="reg-hp" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="reg-alamat" class="form-label">Alamat</label>
+                                        <textarea class="form-control" id="reg-alamat" rows="3" required></textarea>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Daftar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Halaman Login -->
+        <div id="login-page" class="page">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-5">
+                        <div class="card p-4">
+                            <div class="card-body">
+                                <h3 class="card-title text-center mb-4">Login</h3>
+                                <form id="login-form">
+                                    <div class="mb-3">
+                                        <label for="login-email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="login-email" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="login-password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="login-password" required>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Login</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Halaman Pesanan Pengguna -->
+        <div id="user-orders-page" class="page">
+             <div class="container py-5">
+                <h2 class="mb-4">Riwayat Pesanan Saya</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID Pesanan</th>
+                                        <th>Tanggal</th>
+                                        <th>Produk</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-orders-table">
+                                    <!-- Data pesanan pengguna akan dimuat di sini -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!--
+    ===================================================================
+    BACKEND (ADMIN)
+    ===================================================================
+    -->
+    <div id="backend-view" class="d-none">
+        <!-- Navbar Admin -->
+        <nav class="navbar navbar-light bg-white sticky-top shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="#">Admin Dashboard</a>
+                <button class="btn btn-outline-secondary btn-sm" id="admin-logout-btn">Logout</button>
+            </div>
+        </nav>
+
+        <div class="d-flex">
+            <!-- Sidebar Admin -->
+            <nav class="sidebar d-none d-md-block">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link admin-nav-link active" href="#" data-page="admin-dashboard">
+                                <i class="bi bi-grid-fill me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link admin-nav-link" href="#" data-page="admin-transactions">
+                                <i class="bi bi-receipt-cutoff me-2"></i> Transaksi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link admin-nav-link" href="#" data-page="admin-reports">
+                                <i class="bi bi-file-earmark-bar-graph-fill me-2"></i> Laporan
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Konten Utama Admin -->
+            <main class="admin-main-content w-100">
+                <!-- Halaman Dashboard Admin -->
+                <div id="admin-dashboard-page" class="page active">
+                    <div class="container-fluid">
+                        <h2 class="mb-4">Dashboard</h2>
+                        <div class="row g-4">
+                            <div class="col-md-3">
+                                <div class="card text-white bg-primary">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">Total Produk</h5>
+                                                <h3 id="total-produk">0</h3>
+                                            </div>
+                                            <i class="bi bi-box-seam-fill fs-1 opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-white bg-success">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">Total Order</h5>
+                                                <h3 id="total-order">0</h3>
+                                            </div>
+                                            <i class="bi bi-cart-check-fill fs-1 opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-white bg-warning">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">Order Pending</h5>
+                                                <h3 id="order-pending">0</h3>
+                                            </div>
+                                            <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-dark bg-info">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">Total Transaksi</h5>
+                                                <h3 id="total-transaksi">Rp 0</h3>
+                                            </div>
+                                            <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman Transaksi Admin -->
+                <div id="admin-transactions-page" class="page">
+                    <div class="container-fluid">
+                        <h2 class="mb-4">Manajemen Transaksi</h2>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>ID Pesanan</th>
+                                                <th>Pembeli</th>
+                                                <th>Produk</th>
+                                                <th>Total</th>
+                                                <th>Bukti</th>
+                                                <th>Status</th>
+                                                <th>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="admin-transactions-table">
+                                            <!-- Data transaksi akan dimuat di sini -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman Laporan Admin -->
+                <div id="admin-reports-page" class="page">
+                    <div class="container-fluid">
+                        <h2 class="mb-4">Laporan Transaksi</h2>
+                        <div class="card">
+                            <div class="card-body">
+                                <p>Export semua data transaksi ke dalam format PDF atau Excel.</p>
+                                <button class="btn btn-danger me-2" id="export-pdf"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Export ke PDF</button>
+                                <button class="btn btn-success" id="export-excel"><i class="bi bi-file-earmark-excel-fill me-2"></i>Export ke Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+
+    <!--
+    ===================================================================
+    MODALS
+    ===================================================================
+    -->
+
+    <!-- Modal Beli Produk -->
+    <div class="modal fade" id="buyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="buyModalTitle">Beli Produk</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="buy-form">
+                        <input type="hidden" id="buy-product-id">
+                        <div class="mb-3">
+                            <label class="form-label">Produk</label>
+                            <p class="fw-bold" id="buy-product-name"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Harga Satuan</label>
+                            <p id="buy-product-price"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="buy-quantity" class="form-label">Jumlah</label>
+                            <input type="number" class="form-control" id="buy-quantity" value="1" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                             <label for="buy-proof" class="form-label">Upload Bukti Transfer (jpg/png/pdf)</label>
+                             <input class="form-control" type="file" id="buy-proof" accept=".jpg, .jpeg, .png, .pdf" required>
+                        </div>
+                        <hr>
+                        <h5 class="text-end">Total: <span id="buy-total-price" class="text-primary"></span></h5>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Konfirmasi Pesanan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Notifikasi -->
+    <div class="modal fade" id="notificationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notificationTitle">Notifikasi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="notificationBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // ===================================================================
+        // DATA SIMULASI
+        // ===================================================================
+
+        const products = [
+            { id: 1, name: "Laptop Pro X1", price: 15000000, image: "https://placehold.co/600x600/0D6EFD/white?text=Laptop" },
+            { id: 2, name: "Smartphone G5", price: 8500000, image: "https://placehold.co/600x600/198754/white?text=Phone" },
+            { id: 3, name: "Headphone Beats", price: 2500000, image: "https://placehold.co/600x600/6c757d/white?text=Headphone" },
+            { id: 4, name: "Smartwatch Active", price: 3200000, image: "https://placehold.co/600x600/ffc107/black?text=Watch" },
+            { id: 5, name: "Kamera Mirrorless M50", price: 9800000, image: "https://placehold.co/600x600/dc3545/white?text=Camera" },
+            { id: 6, name: "Mechanical Keyboard", price: 1200000, image: "https://placehold.co/600x600/0dcaf0/white?text=Keyboard" },
+            { id: 7, name: "Gaming Mouse Pro", price: 750000, image: "https://placehold.co/600x600/212529/white?text=Mouse" },
+            { id: 8, name: "Tablet Pad Pro", price: 7000000, image: "https://placehold.co/600x600/fd7e14/white?text=Tablet" }
+        ];
+
+        let users = [
+            { id: 1, name: "Admin", email: "admin@tokokita.com", password: "admin", hp: "081234567890", alamat: "Kantor Pusat", role: "admin" },
+            { id: 2, name: "Budi Santoso", email: "budi@gmail.com", password: "123", hp: "081122334455", alamat: "Jl. Merdeka No. 10", role: "user" }
+        ];
+        
+        let orders = [
+            { id: 1, userId: 2, productId: 3, quantity: 1, totalPrice: 2500000, date: "2025-09-01", status: "Pending", proof: "bukti1.jpg" },
+            { id: 2, userId: 2, productId: 5, quantity: 1, totalPrice: 9800000, date: "2025-09-02", status: "Dikonfirmasi", proof: "bukti2.png" },
+        ];
+        
+        let loggedInUser = null;
+
+        // Modals
+        const buyModal = new bootstrap.Modal(document.getElementById('buyModal'));
+        const notificationModal = new bootstrap.Modal(document.getElementById('notificationModal'));
+
+        // ===================================================================
+        // HELPER FUNCTIONS
+        // ===================================================================
+        const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+
+        const showNotification = (title, message) => {
+            document.getElementById('notificationTitle').innerText = title;
+            document.getElementById('notificationBody').innerText = message;
+            notificationModal.show();
+        };
+        
+        const showPage = (view, pageId) => {
+            document.querySelectorAll(`#${view} .page`).forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            const navLinks = view === 'frontend-view' ? 
+                document.querySelectorAll('#frontend-view .navbar .nav-link') : 
+                document.querySelectorAll('.sidebar .nav-link');
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.page === pageId.replace('-page', '')) {
+                    link.classList.add('active');
+                }
+            });
+            // Handle home/products nav-link being active on both pages
+            if (pageId === 'home-page' || pageId === 'products-page') {
+                document.querySelector('#frontend-view .navbar [data-page="home"]').classList.add('active');
+                document.querySelector('#frontend-view .navbar [data-page="products"]').classList.add('active');
+            }
+             if (pageId === 'products-page') {
+                 document.querySelector('#frontend-view .navbar [data-page="home"]').classList.remove('active');
+             } else {
+                 document.querySelector('#frontend-view .navbar [data-page="home"]').classList.add('active');
+                 document.querySelector('#frontend-view .navbar [data-page="products"]').classList.remove('active');
+             }
+
+            window.scrollTo(0, 0);
+        };
+
+        // ===================================================================
+        // RENDER FUNCTIONS
+        // ===================================================================
+        
+        const renderProducts = (filteredProducts = products) => {
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = '';
+            if (filteredProducts.length === 0) {
+                productList.innerHTML = `<div class="col-12 text-center"><p class="text-muted">Produk tidak ditemukan.</p></div>`;
+                return;
+            }
+            filteredProducts.forEach(product => {
+                const productCard = `
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <div class="card h-100">
+                            <img src="${product.image}" class="card-img-top" alt="${product.name}">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${product.name}</h5>
+                                <p class="card-text text-primary fw-bold mb-3">${formatRupiah(product.price)}</p>
+                                <button class="btn btn-primary mt-auto buy-btn" data-id="${product.id}">Beli</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                productList.insertAdjacentHTML('beforeend', productCard);
+            });
+        };
+        
+        const updateAuthState = () => {
+            const authLinks = document.getElementById('auth-links');
+            const userLinks = document.getElementById('user-links');
+            if (loggedInUser) {
+                authLinks.classList.add('d-none');
+                userLinks.classList.remove('d-none');
+                document.getElementById('username-display').innerText = loggedInUser.name;
+            } else {
+                authLinks.classList.remove('d-none');
+                userLinks.classList.add('d-none');
+            }
+        };
+        
+        const renderUserOrders = () => {
+            if (!loggedInUser) return;
+            const userOrdersTable = document.getElementById('user-orders-table');
+            userOrdersTable.innerHTML = '';
+            const currentUserOrders = orders.filter(o => o.userId === loggedInUser.id).reverse();
+            
+            if (currentUserOrders.length === 0) {
+                 userOrdersTable.innerHTML = `<tr><td colspan="5" class="text-center">Anda belum memiliki pesanan.</td></tr>`;
+                 return;
+            }
+            
+            currentUserOrders.forEach(order => {
+                const product = products.find(p => p.id === order.productId);
+                const statusClass = `status-${order.status.toLowerCase()}`;
+                const row = `
+                    <tr>
+                        <td>#${String(order.id).padStart(4, '0')}</td>
+                        <td>${order.date}</td>
+                        <td>${product.name}</td>
+                        <td>${formatRupiah(order.totalPrice)}</td>
+                        <td><span class="badge rounded-pill ${statusClass}">${order.status}</span></td>
+                    </tr>
+                `;
+                userOrdersTable.insertAdjacentHTML('beforeend', row);
+            });
+        };
+
+        // --- Admin Render Functions ---
+        const renderAdminDashboard = () => {
+            document.getElementById('total-produk').innerText = products.length;
+            document.getElementById('total-order').innerText = orders.length;
+            const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+            document.getElementById('order-pending').innerText = pendingOrders;
+            const totalRevenue = orders
+                .filter(o => o.status === 'Dikonfirmasi')
+                .reduce((sum, o) => sum + o.totalPrice, 0);
+            document.getElementById('total-transaksi').innerText = formatRupiah(totalRevenue);
+        };
+        
+        const renderAdminTransactions = () => {
+            const tableBody = document.getElementById('admin-transactions-table');
+            tableBody.innerHTML = '';
+            orders.slice().reverse().forEach(order => {
+                const user = users.find(u => u.id === order.userId);
+                const product = products.find(p => p.id === order.productId);
+                const statusClass = `status-${order.status.toLowerCase()}`;
+
+                const row = `
+                    <tr>
+                        <td>#${String(order.id).padStart(4, '0')}</td>
+                        <td>${user.name}<br><small class="text-muted">${user.email}</small></td>
+                        <td>${product.name} (x${order.quantity})</td>
+                        <td>${formatRupiah(order.totalPrice)}</td>
+                        <td><a href="#" onclick="alert('Melihat bukti: ${order.proof}')">${order.proof}</a></td>
+                        <td><span class="badge rounded-pill ${statusClass}">${order.status}</span></td>
+                        <td>
+                            ${order.status === 'Pending' ? `
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-success confirm-order" data-id="${order.id}"><i class="bi bi-check-lg"></i></button>
+                                <button class="btn btn-danger reject-order" data-id="${order.id}"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+                 tableBody.insertAdjacentHTML('beforeend', row);
+            });
+        };
+        
+        // ===================================================================
+        // EVENT LISTENERS
+        // ===================================================================
+
+        // --- Frontend Navigation ---
+        document.querySelectorAll('#frontend-view .navbar [data-page]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = e.currentTarget.dataset.page;
+                if (page) {
+                    if (page === 'user-orders' && !loggedInUser) {
+                        showNotification('Akses Ditolak', 'Silakan login terlebih dahulu untuk melihat pesanan Anda.');
+                        showPage('frontend-view', 'login-page');
+                        return;
+                    }
+                    if (page === 'user-orders') {
+                        renderUserOrders();
+                    }
+                    if (page === 'home') {
+                         showPage('frontend-view', 'products-page');
+                    } else {
+                         showPage('frontend-view', `${page}-page`);
+                    }
+                }
+            });
+        });
+
+        // --- Search ---
+        document.getElementById('search-button').addEventListener('click', () => {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = products.filter(p => p.name.toLowerCase().includes(query));
+            renderProducts(filtered);
+        });
+        document.getElementById('search-input').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('search-button').click();
+            }
+        });
+
+        // --- Registration ---
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-nama').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const hp = document.getElementById('reg-hp').value;
+            const alamat = document.getElementById('reg-alamat').value;
+            
+            if (users.some(u => u.email === email)) {
+                showNotification('Registrasi Gagal', 'Email sudah terdaftar. Silakan gunakan email lain.');
+                return;
+            }
+
+            const newUser = {
+                id: users.length + 1,
+                name, email, password, hp, alamat,
+                role: 'user'
+            };
+            users.push(newUser);
+            showNotification('Registrasi Berhasil', 'Akun Anda telah berhasil dibuat. Silakan login.');
+            e.target.reset();
+            showPage('frontend-view', 'login-page');
+        });
+
+        // --- Login ---
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            const user = users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                loggedInUser = user;
+                if (user.role === 'admin') {
+                    document.getElementById('frontend-view').classList.add('d-none');
+                    document.getElementById('backend-view').classList.remove('d-none');
+                    showPage('backend-view', 'admin-dashboard-page');
+                    renderAdminDashboard();
+                    renderAdminTransactions();
+                } else {
+                    updateAuthState();
+                    showPage('frontend-view', 'products-page');
+                }
+                e.target.reset();
+            } else {
+                showNotification('Login Gagal', 'Email atau password salah.');
+            }
+        });
+        
+        // --- Logout ---
+        const handleLogout = () => {
+            loggedInUser = null;
+            updateAuthState();
+            document.getElementById('frontend-view').classList.remove('d-none');
+            document.getElementById('backend-view').classList.add('d-none');
+            showPage('frontend-view', 'products-page');
+        };
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+        document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
+
+        // --- Buy Process ---
+        document.getElementById('product-list').addEventListener('click', (e) => {
+            if (e.target.classList.contains('buy-btn')) {
+                if (!loggedInUser) {
+                    showNotification('Akses Ditolak', 'Silakan login terlebih dahulu untuk melakukan pembelian.');
+                    showPage('frontend-view', 'login-page');
+                    return;
+                }
+                const productId = parseInt(e.target.dataset.id);
+                const product = products.find(p => p.id === productId);
+                
+                document.getElementById('buy-product-id').value = product.id;
+                document.getElementById('buy-product-name').innerText = product.name;
+                document.getElementById('buy-product-price').innerText = formatRupiah(product.price);
+                document.getElementById('buy-quantity').value = 1;
+                document.getElementById('buy-total-price').innerText = formatRupiah(product.price);
+                
+                buyModal.show();
+            }
+        });
+        
+        // Update total price in buy modal
+        document.getElementById('buy-quantity').addEventListener('input', () => {
+            const quantity = parseInt(document.getElementById('buy-quantity').value) || 0;
+            const productId = parseInt(document.getElementById('buy-product-id').value);
+            const product = products.find(p => p.id === productId);
+            const totalPrice = product.price * quantity;
+            document.getElementById('buy-total-price').innerText = formatRupiah(totalPrice);
+        });
+
+        // Handle buy form submission
+        document.getElementById('buy-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const productId = parseInt(document.getElementById('buy-product-id').value);
+            const quantity = parseInt(document.getElementById('buy-quantity').value);
+            const proofFile = document.getElementById('buy-proof').files[0];
+            
+            if (!proofFile) {
+                alert('Silakan upload bukti transfer.');
+                return;
+            }
+
+            const product = products.find(p => p.id === productId);
+            const newOrder = {
+                id: orders.length + 1,
+                userId: loggedInUser.id,
+                productId: product.id,
+                quantity: quantity,
+                totalPrice: product.price * quantity,
+                date: new Date().toISOString().split('T')[0],
+                status: 'Pending',
+                proof: proofFile.name
+            };
+            orders.push(newOrder);
+            buyModal.hide();
+            e.target.reset();
+            showNotification('Pesanan Berhasil', 'Pesanan Anda telah kami terima dan akan segera diproses.');
+            renderUserOrders();
+            showPage('frontend-view', 'user-orders-page');
+        });
+
+
+        // --- Admin Navigation ---
+        document.querySelectorAll('.admin-nav-link').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                showPage('backend-view', e.currentTarget.dataset.page + '-page');
+            });
+        });
+        
+        // --- Admin Actions (Confirm/Reject Order) ---
+        document.getElementById('admin-transactions-table').addEventListener('click', (e) => {
+            const target = e.target.closest('.confirm-order, .reject-order');
+            if (!target) return;
+            
+            const orderId = parseInt(target.dataset.id);
+            const order = orders.find(o => o.id === orderId);
+            
+            if (target.classList.contains('confirm-order')) {
+                order.status = 'Dikonfirmasi';
+            } else if (target.classList.contains('reject-order')) {
+                order.status = 'Ditolak';
+            }
+            
+            renderAdminTransactions();
+            renderAdminDashboard();
+        });
+        
+        // --- Admin Reports (Export) ---
+        document.getElementById('export-pdf').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text("Laporan Transaksi - TokoKita", 14, 16);
+            
+            const tableData = orders.map(order => {
+                const user = users.find(u => u.id === order.userId);
+                const product = products.find(p => p.id === order.productId);
+                return [
+                    order.id,
+                    order.date,
+                    user.name,
+                    `${product.name} (x${order.quantity})`,
+                    formatRupiah(order.totalPrice),
+                    order.status
+                ];
+            });
+            
+            doc.autoTable({
+                head: [['ID', 'Tanggal', 'Pembeli', 'Produk', 'Total', 'Status']],
+                body: tableData,
+                startY: 20,
+                theme: 'grid'
+            });
+
+            doc.save('laporan-transaksi.pdf');
+        });
+        
+        document.getElementById('export-excel').addEventListener('click', () => {
+            const tableData = orders.map(order => {
+                const user = users.find(u => u.id === order.userId);
+                const product = products.find(p => p.id === order.productId);
+                return {
+                    'ID Pesanan': order.id,
+                    'Tanggal': order.date,
+                    'Nama Pembeli': user.name,
+                    'Email Pembeli': user.email,
+                    'Produk': product.name,
+                    'Jumlah': order.quantity,
+                    'Total Harga': order.totalPrice,
+                    'Status': order.status
+                };
+            });
+            
+            const worksheet = XLSX.utils.json_to_sheet(tableData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Transaksi");
+            
+            // Atur lebar kolom
+            worksheet['!cols'] = [
+                { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 25 },
+                { wch: 20 }, { wch: 8 }, { wch: 15 }, { wch: 15 }
+            ];
+            
+            XLSX.writeFile(workbook, "laporan-transaksi.xlsx");
+        });
+
+
+        // ===================================================================
+        // INITIALIZATION
+        // ===================================================================
+        
+        const initializeApp = () => {
+            renderProducts();
+            updateAuthState();
+            showPage('frontend-view', 'products-page');
+        };
+
+        initializeApp();
+    });
+    </script>
+</body>
+</html>
+
